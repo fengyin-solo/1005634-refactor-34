@@ -1,4 +1,9 @@
 import { MODULE_BY_KEY } from '@/data/modules'
+import {
+  COMPENSATOR_KEY,
+  applyCompensatorAction,
+  decorateCompensatorRow,
+} from '@/data/compensator-domain'
 import { allRows, listRows, resetRows, saveRows } from '@/data/local-store'
 import type { ActionResult, EntryRow, ModuleMeta, OverviewResult, PageResult } from '@/data/types'
 
@@ -25,10 +30,16 @@ export function filterRows(rows: EntryRow[], filters: Record<string, string>): E
 
 export function listEntries(key: string, filters: Record<string, string> = {}): PageResult {
   const matched = filterRows(listRows(key), filters)
-  return { items: matched, total: matched.length, page: 1, size: matched.length }
+  // 补偿器列表与检查记录部件状态走统一归类口径，和导出、汇总同一份实现。
+  const items = key === COMPENSATOR_KEY ? matched.map(decorateCompensatorRow) : matched
+  return { items, total: items.length, page: 1, size: items.length }
 }
 
 export function runAction(key: string, id: number, action: string): ActionResult {
+  // 补偿器的判定与归类有自己的一份口径，通用流转不介入。
+  if (key === COMPENSATOR_KEY) {
+    return applyCompensatorAction(id, action)
+  }
   const meta = moduleMeta(key)
   const target = meta.actionTargets[action]
   if (!target) {
@@ -65,7 +76,9 @@ export function exportEntries(key: string): { filename: string; content: string 
   const meta = moduleMeta(key)
   const header = ['编号', ...meta.fields, '当前状态']
   const lines = [header.join(',')]
-  for (const row of listRows(key)) {
+  // 导出与列表共用同一份判定/归类：补偿器按统一口径输出，判成需更换的不会再导出成状态正常。
+  const rows = key === COMPENSATOR_KEY ? listRows(key).map(decorateCompensatorRow) : listRows(key)
+  for (const row of rows) {
     lines.push([row.id, ...meta.fields.map((field) => row[field] ?? ''), row.status].join(','))
   }
   return { filename: `${meta.name}-清单.csv`, content: `\uFEFF${lines.join('\n')}` }

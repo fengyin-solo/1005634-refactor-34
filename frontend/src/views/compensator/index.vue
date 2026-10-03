@@ -83,9 +83,8 @@ import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('compensator')
 const columns = ["检查编号", "所属管段", "补偿器型号", "伸缩量", "外观状况", "检查人", "检查日期", "部件状态"]
-const actions = ["提交检查", "判定正常", "提出更换"]
-const statuses = ["待检查", "检查中", "状态正常", "需更换"]
-const stats = [{"label": "待检查补偿器", "value": 0}, {"label": "状态正常补偿器", "value": 0}, {"label": "需更换补偿器", "value": 0}]
+const actions = ["提交检查", "提交判定"]
+const statuses = ["待检查", "检查中", "挂起", "状态正常", "需更换"]
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
@@ -96,6 +95,18 @@ const statusSummary = computed(() =>
   statuses.map((status: string) => ({
     status,
     count: rows.value.filter((row) => String(row.status) === status).length,
+  })),
+)
+// 汇总与列表、导出同一份归类口径：数量直接从统一判定后的列表里数。
+const stats = computed(() =>
+  [
+    ["待检查补偿器", "待检查"],
+    ["挂起待补补偿器", "挂起"],
+    ["状态正常补偿器", "状态正常"],
+    ["需更换补偿器", "需更换"],
+  ].map(([label, status]) => ({
+    label,
+    value: rows.value.filter((row) => String(row.status) === status).length,
   })),
 )
 
