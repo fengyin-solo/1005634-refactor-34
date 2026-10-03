@@ -2,7 +2,8 @@ import { SEED_ROWS } from './seed'
 import type { EntryRow } from './types'
 
 // 本地持久化：数据放在 localStorage 里，刷新、关掉再打开都还在。
-const STORAGE_KEY = 'district-heating:entries'
+// v2：补偿器检查收拢为统一口径后，字段结构有调整，旧缓存直接作废重播示例数据。
+const STORAGE_KEY = 'district-heating:entries:v2'
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
@@ -56,4 +57,26 @@ export function resetRows(key: string): EntryRow[] {
 
 export function storageKey(): string {
   return STORAGE_KEY
+}
+
+// 业务域自己的小台账（补偿器判定、阀门井待检查清单等）共用这两个存取口。
+export function readJson<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return fallback
+  }
+  const raw = window.localStorage.getItem(key)
+  if (!raw) {
+    return fallback
+  }
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    return fallback
+  }
+}
+
+export function writeJson<T>(key: string, value: T): void {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  }
 }

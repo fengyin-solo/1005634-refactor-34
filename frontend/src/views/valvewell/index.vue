@@ -63,6 +63,35 @@
       </tbody>
     </table>
 
+    <!-- 补偿器检查判为需更换后，结论落到这里的待检查清单；改判后条目自动收走 -->
+    <section class="pending-box">
+      <h3>补偿器更换待检查清单</h3>
+      <p class="page-desc">由补偿器现场判定自动推送，按补偿器检查记录去重；重复提交判定只落一条。</p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>井编号</th>
+            <th>所属管段</th>
+            <th>来源检查编号</th>
+            <th>提出人</th>
+            <th>提出时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in pendingItems" :key="item.compensatorEntryId">
+            <td>{{ item.井编号 }}</td>
+            <td>{{ item.所属管段 }}</td>
+            <td>{{ item.来源检查编号 }}</td>
+            <td>{{ item.提出人 }}</td>
+            <td>{{ item.提出时间 }}</td>
+          </tr>
+          <tr v-if="!pendingItems.length">
+            <td colspan="5" class="empty-state">暂无补偿器更换待检查条目</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
     <footer class="page-foot">
       <span>共 {{ total }} 条阀门井维护记录</span>
       <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
@@ -76,9 +105,11 @@ import { computed, onMounted, ref } from 'vue'
 import {
   downloadEntries,
   listEntries,
+  listValvePending,
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import type { ValvePendingItem } from '@/domain/compensator'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('valvewell')
@@ -88,6 +119,7 @@ const statuses = ["待检查", "检查中", "已养护", "需维修"]
 const stats = [{"label": "待检查阀门井", "value": 0}, {"label": "已养护阀门井", "value": 0}, {"label": "需维修阀门井", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
+const pendingItems = ref<ValvePendingItem[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
@@ -128,6 +160,7 @@ function reload() {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    pendingItems.value = listValvePending()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '阀门井维护列表读取失败'
   }
@@ -135,3 +168,17 @@ function reload() {
 
 onMounted(reload)
 </script>
+
+<style scoped>
+.pending-box {
+  margin-top: 16px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.pending-box h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+</style>
